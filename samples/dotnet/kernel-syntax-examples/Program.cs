@@ -72,13 +72,13 @@ public static class Program
         await Example30.RunAsync();
         Console.WriteLine("== DONE ==");
 
-        await Example21_ChatGptPlugins.RunAsync();
-        Console.WriteLine("== DONE ==");
+        // await Example21_ChatGptPlugins.RunAsync();
+        // Console.WriteLine("== DONE ==");
 
-        await Example22_OpenApiSkill.RunAsync();
-        Console.WriteLine("== DONE ==");
+        // await Example22_OpenApiSkill.RunAsync();
+        // Console.WriteLine("== DONE ==");
 
-        await Example23_ReadOnlyMemoryStore.RunAsync();
-        Console.WriteLine("== DONE ==");
+        // await Example23_ReadOnlyMemoryStore.RunAsync();
+        // Console.WriteLine("== DONE ==");
     }
 }

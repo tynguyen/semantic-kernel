@@ -96,9 +96,9 @@ public class Example30_github_QA
             .WithLogger(ConsoleLogger.Log)
             .Configure(c =>
             {
-                c.AddOpenAITextCompletionService("davinci", "text-davinci-003", "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");
-                c.AddOpenAIEmbeddingGenerationService("ada", "text-embedding-ada-002", "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");
-                c.AddOpenAIChatCompletionService("chat", "gpt-3.5-turbo", "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");
+                c.AddOpenAITextCompletionService("davinci", "text-davinci-003", Env.Var("OPENAI_API_KEY"));
+                c.AddOpenAIEmbeddingGenerationService("ada", "text-embedding-ada-002", Env.Var("OPENAI_API_KEY"));
+                c.AddOpenAIChatCompletionService("chat", "gpt-3.5-turbo", Env.Var("OPENAI_API_KEY"));
 
             })
             .WithMemoryStorage(this._MemoryStore)

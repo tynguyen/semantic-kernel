@@ -277,7 +277,7 @@ internal static class Example12_Planning
         kernel.Config.AddOpenAITextCompletionService(
             "OpenAI_davinci",
             "text-davinci-003",
-            "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"
+            Env.Var("OPENAI_API_KEY")
         );
 
         // Load native skill into the kernel skill collection, sharing its functions with prompt templates
