@@ -21,6 +21,7 @@ internal static class Example12_Planning
     {
         await PoetrySamplesAsync();
         await EmailSamplesAsync();
+        await EmailSampleWithMemoryAsync();
         await BookSamplesAsync();
         await MemorySampleAsync();
         await ConditionalSampleAsync();
@@ -130,6 +131,56 @@ internal static class Example12_Planning
             "happily ever after, with the people of the kingdom remembering Mira as the brave young woman who saved them from the dragon.");
         await ExecutePlanAsync(kernel, planner, executionResults, 5);
     }
+    private static async Task EmailSampleWithMemoryAsync()
+    {
+        Console.WriteLine("======== Planning - Email Plan using Memory ========");
+
+        var kernel = new KernelBuilder()
+            .WithLogger(ConsoleLogger.Log)
+            .Configure(
+                config =>
+                {
+
+                    config.AddOpenAIEmbeddingGenerationService(
+                        "OpenAI_davinci",
+                        "text-davinci-003",
+                        "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");
+                    config.AddOpenAITextCompletionService(
+                        "OpenAI_davinci",
+                        "text-davinci-003",
+                        "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"
+                    );
+                })
+            .WithMemoryStorage(new VolatileMemoryStore())
+            .Build();
+
+        // Load native skill into the kernel skill collection, sharing its functions with prompt templates
+        var planner = kernel.ImportSkill(new PlannerSkill(kernel), "planning");
+
+        string folder = RepoFiles.SampleSkillsPath();
+        kernel.ImportSemanticSkillFromDirectory(folder, "SummarizeSkill");
+        kernel.ImportSemanticSkillFromDirectory(folder, "WriterSkill");
+
+        var originalPlan = await kernel.RunAsync("Summarize an input, translate to french, and e-mail to John Doe", planner["CreatePlan"]);
+
+        Console.WriteLine("Original plan:");
+        Console.WriteLine(originalPlan.Variables.ToPlan().PlanString);
+
+        var executionResults = originalPlan;
+        executionResults.Variables.Update(
+            "Once upon a time, in a faraway kingdom, there lived a kind and just king named Arjun. " +
+            "He ruled over his kingdom with fairness and compassion, earning him the love and admiration of his people. " +
+            "However, the kingdom was plagued by a terrible dragon that lived in the nearby mountains and terrorized the nearby villages, " +
+            "burning their crops and homes. The king had tried everything to defeat the dragon, but to no avail. " +
+            "One day, a young woman named Mira approached the king and offered to help defeat the dragon. She was a skilled archer " +
+            "and claimed that she had a plan to defeat the dragon once and for all. The king was skeptical, but desperate for a solution, " +
+            "so he agreed to let her try. Mira set out for the dragon's lair and, with the help of her trusty bow and arrow, " +
+            "she was able to strike the dragon with a single shot through its heart, killing it instantly. The people rejoiced " +
+            "and the kingdom was at peace once again. The king was so grateful to Mira that he asked her to marry him and she agreed. " +
+            "They ruled the kingdom together, ruling with fairness and compassion, just as Arjun had done before. They lived " +
+            "happily ever after, with the people of the kingdom remembering Mira as the brave young woman who saved them from the dragon.");
+        await ExecutePlanAsync(kernel, planner, executionResults, 5);
+    }
 
     private static async Task BookSamplesAsync()
     {
@@ -171,17 +222,16 @@ internal static class Example12_Planning
             .Configure(
                 config =>
                 {
-                    config.AddAzureOpenAITextCompletionService(
-                        Env.Var("AZURE_OPENAI_SERVICE_ID"),
-                        Env.Var("AZURE_OPENAI_DEPLOYMENT_NAME"),
-                        Env.Var("AZURE_OPENAI_ENDPOINT"),
-                        Env.Var("AZURE_OPENAI_KEY"));
 
-                    config.AddAzureOpenAIEmbeddingGenerationService(
-                        Env.Var("AZURE_OPENAI_EMBEDDINGS_SERVICE_ID"),
-                        Env.Var("AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME"),
-                        Env.Var("AZURE_OPENAI_EMBEDDINGS_ENDPOINT"),
-                        Env.Var("AZURE_OPENAI_EMBEDDINGS_KEY"));
+                    config.AddOpenAIEmbeddingGenerationService(
+                        "OpenAI_davinci",
+                        "text-davinci-003",
+                        "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");
+                    config.AddOpenAITextCompletionService(
+                        "OpenAI_davinci",
+                        "text-davinci-003",
+                        "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"
+                    );
                 })
             .WithMemoryStorage(new VolatileMemoryStore())
             .Build();
@@ -219,11 +269,16 @@ internal static class Example12_Planning
     private static IKernel InitializeKernelAndPlanner(out IDictionary<string, ISKFunction> planner, int maxTokens = 1024)
     {
         var kernel = new KernelBuilder().WithLogger(ConsoleLogger.Log).Build();
-        kernel.Config.AddAzureOpenAITextCompletionService(
-            Env.Var("AZURE_OPENAI_SERVICE_ID"),
-            Env.Var("AZURE_OPENAI_DEPLOYMENT_NAME"),
-            Env.Var("AZURE_OPENAI_ENDPOINT"),
-            Env.Var("AZURE_OPENAI_KEY"));
+        // kernel.Config.AddAzureOpenAITextCompletionService(
+        //     Env.Var("AZURE_OPENAI_SERVICE_ID"),
+        //     Env.Var("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        //     Env.Var("AZURE_OPENAI_ENDPOINT"),
+        //     Env.Var("AZURE_OPENAI_KEY"));
+        kernel.Config.AddOpenAITextCompletionService(
+            "OpenAI_davinci",
+            "text-davinci-003",
+            "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"
+        );
 
         // Load native skill into the kernel skill collection, sharing its functions with prompt templates
         planner = kernel.ImportSkill(new PlannerSkill(kernel, maxTokens), "planning");

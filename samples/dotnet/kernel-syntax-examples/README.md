@@ -36,3 +36,4 @@ To set your secrets with environment variables, use these names:
 * AZURE_OPENAI_KEY
 * QDRANT_ENDPOINT
 * QDRANT_PORT
+
