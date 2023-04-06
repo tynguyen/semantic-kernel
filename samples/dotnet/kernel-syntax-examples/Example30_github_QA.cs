@@ -11,6 +11,7 @@ using CustomQASkills;
 using GitHubSkills;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.AI.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.Memory.Qdrant;
 using Microsoft.SemanticKernel.Connectors.OpenAI.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI.Tokenizers;
 using Microsoft.SemanticKernel.CoreSkills;
@@ -19,7 +20,6 @@ using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SemanticFunctions.Partitioning;
 using Microsoft.SemanticKernel.Skills;
-using Microsoft.SemanticKernel.Skills.Memory.Qdrant;
 using Microsoft.SemanticKernel.Skills.Web;
 using RepoUtils;
 
