@@ -78,7 +78,10 @@ public static class Program
         // await Example22_OpenApiSkill.RunAsync();
         // Console.WriteLine("== DONE ==");
 
-        // await Example23_ReadOnlyMemoryStore.RunAsync();
-        // Console.WriteLine("== DONE ==");
+        await Example23_ReadOnlyMemoryStore.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        Example24_Tokenizer.Run();
+        Console.WriteLine("== DONE ==");
     }
 }
