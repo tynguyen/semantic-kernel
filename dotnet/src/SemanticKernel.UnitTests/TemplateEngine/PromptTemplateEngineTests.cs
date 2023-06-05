@@ -3,7 +3,6 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Microsoft.SemanticKernel.TemplateEngine;
@@ -15,12 +14,9 @@ using Xunit.Abstractions;
 
 namespace SemanticKernel.UnitTests.TemplateEngine;
 
-#pragma warning disable VSTHRD103 // ok to use WriteLine synchronously
-#pragma warning disable CA1849 // ok to use WriteLine synchronously
-
 public sealed class PromptTemplateEngineTests
 {
-    private readonly IPromptTemplateEngine _target;
+    private readonly PromptTemplateEngine _target;
     private readonly ContextVariables _variables;
     private readonly Mock<IReadOnlySkillCollection> _skills;
     private readonly ITestOutputHelper _logger;
@@ -28,7 +24,7 @@ public sealed class PromptTemplateEngineTests
     public PromptTemplateEngineTests(ITestOutputHelper testOutputHelper)
     {
         this._logger = testOutputHelper;
-        this._target = new PromptTemplateEngine(ConsoleLogger.Log);
+        this._target = new PromptTemplateEngine(TestConsoleLogger.Log);
         this._variables = new ContextVariables(Guid.NewGuid().ToString("X"));
         this._skills = new Mock<IReadOnlySkillCollection>();
     }
@@ -139,7 +135,10 @@ public sealed class PromptTemplateEngineTests
 
         this._variables.Update("INPUT-BAR");
         var template = "foo-{{function}}-baz";
-        this._skills.Setup(x => x.HasFunction("function")).Returns(true);
+        {
+            ISKFunction? outFunc = func;
+            this._skills.Setup(x => x.TryGetFunction("function", out outFunc)).Returns(true);
+        }
         this._skills.Setup(x => x.GetFunction("function")).Returns(func);
         var context = this.MockContext();
 
@@ -167,7 +166,10 @@ public sealed class PromptTemplateEngineTests
 
         this._variables.Set("myVar", "BAR");
         var template = "foo-{{function $myVar}}-baz";
-        this._skills.Setup(x => x.HasFunction("function")).Returns(true);
+        {
+            ISKFunction? outFunc = func;
+            this._skills.Setup(x => x.TryGetFunction("function", out outFunc)).Returns(true);
+        }
         this._skills.Setup(x => x.GetFunction("function")).Returns(func);
         var context = this.MockContext();
 
@@ -188,7 +190,7 @@ public sealed class PromptTemplateEngineTests
         {
             // Input value should be "BAR" because the variable $myVar is passed in
             this._logger.WriteLine("MyFunction call received, input: {0}", cx.Variables.Input);
-            return Task.FromResult(cx.Variables.Input);
+            return Task.FromResult(cx.Variables.Input.Value);
         }
 
         ISKFunction? func = SKFunction.FromNativeMethod(Method(MyFunctionAsync), this);
@@ -197,7 +199,10 @@ public sealed class PromptTemplateEngineTests
         this._variables.Set("myVar", "BAR");
 
         var template = "foo-{{function $myVar}}-baz";
-        this._skills.Setup(x => x.HasFunction("function")).Returns(true);
+        {
+            ISKFunction? outFunc = func;
+            this._skills.Setup(x => x.TryGetFunction("function", out outFunc)).Returns(true);
+        }
         this._skills.Setup(x => x.GetFunction("function")).Returns(func);
         var context = this.MockContext();
 
@@ -217,10 +222,7 @@ public sealed class PromptTemplateEngineTests
     {
         return new SKContext(
             this._variables,
-            NullMemory.Instance,
-            this._skills.Object,
-            ConsoleLogger.Log);
+            skills: this._skills.Object,
+            logger: TestConsoleLogger.Log);
     }
 }
-#pragma warning restore VSTHRD103
-#pragma warning restore CA1849

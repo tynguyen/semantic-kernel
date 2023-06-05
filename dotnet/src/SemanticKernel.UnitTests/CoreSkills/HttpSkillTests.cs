@@ -5,10 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.CoreSkills;
-using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Orchestration;
 using Moq;
 using Moq.Protected;
@@ -18,7 +16,7 @@ namespace SemanticKernel.UnitTests.CoreSkills;
 
 public class HttpSkillTests : IDisposable
 {
-    private readonly SKContext _context = new SKContext(new ContextVariables(), NullMemory.Instance, null, NullLogger.Instance);
+    private readonly SKContext _context = new();
     private readonly string _content = "hello world";
     private readonly string _uriString = "http://www.example.com";
 
@@ -55,7 +53,7 @@ public class HttpSkillTests : IDisposable
         using var skill = new HttpSkill(client);
 
         // Act
-        var result = await skill.GetAsync(this._uriString);
+        var result = await skill.GetAsync(this._uriString, this._context);
 
         // Assert
         Assert.Equal(this._content, result);
@@ -105,7 +103,7 @@ public class HttpSkillTests : IDisposable
         using var skill = new HttpSkill(client);
 
         // Act
-        var result = await skill.DeleteAsync(this._uriString);
+        var result = await skill.DeleteAsync(this._uriString, this._context);
 
         // Assert
         Assert.Equal(this._content, result);

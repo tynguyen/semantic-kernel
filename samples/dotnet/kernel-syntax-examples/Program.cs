@@ -28,6 +28,17 @@ public static class Program
 
         // await Example07_TemplateLanguage.RunAsync();
         // Console.WriteLine("== DONE ==");
+        await Example04_CombineLLMPromptsAndNativeCode.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example05_InlineFunctionDefinition.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example06_TemplateLanguage.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example07_BingAndGoogleSkills.RunAsync();
+        Console.WriteLine("== DONE ==");
 
         // await Example08_RetryHandler.RunAsync();
         // Console.WriteLine("== DONE ==");
@@ -41,14 +52,14 @@ public static class Program
         // await Example11_WebSearchQueries.RunAsync();
         // Console.WriteLine("== DONE ==");
 
-        // await Example12_Planning.RunAsync();
-        // Console.WriteLine("== DONE ==");
+        await Example12_SequentialPlanner.RunAsync();
+        Console.WriteLine("== DONE ==");
 
         // await Example13_ConversationSummarySkill.RunAsync();
         // Console.WriteLine("== DONE ==");
 
-        // await Example14_Memory.RunAsync();
-        // Console.WriteLine("== DONE ==");
+        await Example14_SemanticMemory.RunAsync();
+        Console.WriteLine("== DONE ==");
 
         // await Example15_MemorySkill.RunAsync();
         // Console.WriteLine("== DONE ==");
@@ -77,11 +88,66 @@ public static class Program
 
         // await Example22_OpenApiSkill.RunAsync();
         // Console.WriteLine("== DONE ==");
-
-        await Example23_ReadOnlyMemoryStore.RunAsync();
+        await Example22_OpenApiSkill_AzureKeyVault.RunAsync();
         Console.WriteLine("== DONE ==");
 
-        Example24_Tokenizer.Run();
+        await Example23_OpenApiSkill_GitHub.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example24_OpenApiSkill_Jira.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example25_ReadOnlyMemoryStore.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example26_AADAuth.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example27_SemanticFunctionsUsingChatGPT.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example28_ActionPlanner.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        Example29_Tokenizer.Run();
+        Console.WriteLine("== DONE ==");
+
+        await Example30_ChatWithPrompts.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example31_CustomPlanner.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example32_StreamingCompletion.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example33_StreamingChat.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example34_CustomChatModel.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example35_GrpcSkills.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example36_MultiCompletion.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example37_MultiStreamingCompletion.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example38_Pinecone.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        await Example39_Postgres.RunAsync();
+
+        await Example40_DIContainer.RunAsync();
+        Console.WriteLine("== DONE ==");
+
+        Example41_HttpClientUsage.Run();
+        Console.WriteLine("== DONE ==");
+
+        Example42_KernelBuilder.Run();
         Console.WriteLine("== DONE ==");
     }
 }

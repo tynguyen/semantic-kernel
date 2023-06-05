@@ -7,6 +7,8 @@ using Microsoft.SemanticKernel.AI.Embeddings;
 using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Reliability;
+using Microsoft.SemanticKernel.Security;
+using Microsoft.SemanticKernel.Services;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Microsoft.SemanticKernel.TemplateEngine;
 
@@ -20,9 +22,12 @@ public sealed class KernelBuilder
 {
     private KernelConfig _config = new();
     private ISemanticTextMemory _memory = NullMemory.Instance;
-    private ILogger _log = NullLogger.Instance;
+    private ILogger _logger = NullLogger.Instance;
     private IMemoryStore? _memoryStorage = null;
     private IDelegatingHandlerFactory? _httpHandlerFactory = null;
+    private IPromptTemplateEngine? _promptTemplateEngine;
+    private readonly AIServiceCollection _aiServices = new();
+    private ITrustService? _trustService = null;
 
     /// <summary>
     /// Create a new kernel instance
@@ -46,11 +51,13 @@ public sealed class KernelBuilder
         }
 
         var instance = new Kernel(
-            new SkillCollection(this._log),
-            new PromptTemplateEngine(this._log),
+            new SkillCollection(this._logger),
+            this._aiServices.Build(),
+            this._promptTemplateEngine ?? new PromptTemplateEngine(this._logger),
             this._memory,
             this._config,
-            this._log
+            this._logger,
+            this._trustService
         );
 
         // TODO: decouple this from 'UseMemory' kernel extension
@@ -69,8 +76,8 @@ public sealed class KernelBuilder
     /// <returns>Updated kernel builder including the logger.</returns>
     public KernelBuilder WithLogger(ILogger log)
     {
-        Verify.NotNull(log, "The logger instance provided is NULL");
-        this._log = log;
+        Verify.NotNull(log);
+        this._logger = log;
         return this;
     }
 
@@ -81,7 +88,7 @@ public sealed class KernelBuilder
     /// <returns>Updated kernel builder including the semantic text memory entity.</returns>
     public KernelBuilder WithMemory(ISemanticTextMemory memory)
     {
-        Verify.NotNull(memory, "The memory instance provided is NULL");
+        Verify.NotNull(memory);
         this._memory = memory;
         return this;
     }
@@ -93,8 +100,20 @@ public sealed class KernelBuilder
     /// <returns>Updated kernel builder including the memory storage.</returns>
     public KernelBuilder WithMemoryStorage(IMemoryStore storage)
     {
-        Verify.NotNull(storage, "The memory instance provided is NULL");
+        Verify.NotNull(storage);
         this._memoryStorage = storage;
+        return this;
+    }
+
+    /// <summary>
+    /// Add prompt template engine to the kernel to be built.
+    /// </summary>
+    /// <param name="promptTemplateEngine">Prompt template engine to add.</param>
+    /// <returns>Updated kernel builder including the prompt template engine.</returns>
+    public KernelBuilder WithPromptTemplateEngine(IPromptTemplateEngine promptTemplateEngine)
+    {
+        Verify.NotNull(promptTemplateEngine);
+        this._promptTemplateEngine = promptTemplateEngine;
         return this;
     }
 
@@ -105,10 +124,10 @@ public sealed class KernelBuilder
     /// <param name="embeddingGenerator">Embedding generator to add.</param>
     /// <returns>Updated kernel builder including the memory storage and embedding generator.</returns>
     public KernelBuilder WithMemoryStorageAndTextEmbeddingGeneration(
-        IMemoryStore storage, IEmbeddingGeneration<string, float> embeddingGenerator)
+        IMemoryStore storage, ITextEmbeddingGeneration embeddingGenerator)
     {
-        Verify.NotNull(storage, "The memory instance provided is NULL");
-        Verify.NotNull(embeddingGenerator, "The embedding generator instance provided is NULL");
+        Verify.NotNull(storage);
+        Verify.NotNull(embeddingGenerator);
         this._memory = new SemanticTextMemory(storage, embeddingGenerator);
         return this;
     }
@@ -120,7 +139,7 @@ public sealed class KernelBuilder
     /// <returns>Updated kernel builder including the retry handler factory.</returns>
     public KernelBuilder WithRetryHandlerFactory(IDelegatingHandlerFactory httpHandlerFactory)
     {
-        Verify.NotNull(httpHandlerFactory, "The retry handler factory instance provided is NULL");
+        Verify.NotNull(httpHandlerFactory);
         this._httpHandlerFactory = httpHandlerFactory;
         return this;
     }
@@ -132,8 +151,21 @@ public sealed class KernelBuilder
     /// <returns>Updated kernel builder including the given configuration.</returns>
     public KernelBuilder WithConfiguration(KernelConfig config)
     {
-        Verify.NotNull(config, "The configuration instance provided is NULL");
+        Verify.NotNull(config);
         this._config = config;
+        return this;
+    }
+
+    /// <summary>
+    /// Use the given default trust service with the kernel to be built.
+    /// Functions directly created through the kernel will use this trust service.
+    /// If null, the created functions will rely on the TrustService.DefaultTrusted implementation.
+    /// </summary>
+    /// <param name="trustService">Trust service to use.</param>
+    /// <returns>Updated kernel builder including the given service.</returns>
+    public KernelBuilder WithTrustService(ITrustService? trustService)
+    {
+        this._trustService = trustService;
         return this;
     }
 
@@ -144,8 +176,58 @@ public sealed class KernelBuilder
     /// <returns>Updated kernel builder including the updated configuration.</returns>
     public KernelBuilder Configure(Action<KernelConfig> configure)
     {
-        Verify.NotNull(configure, "The configuration action provided is NULL");
+        Verify.NotNull(configure);
         configure.Invoke(this._config);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a <typeparamref name="TService"/> instance to the services collection
+    /// </summary>
+    /// <param name="instance">The <typeparamref name="TService"/> instance.</param>
+    public KernelBuilder WithDefaultAIService<TService>(TService instance) where TService : IAIService
+    {
+        this._aiServices.SetService<TService>(instance);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a <typeparamref name="TService"/> instance to the services collection
+    /// </summary>
+    /// <param name="serviceId">The service ID</param>
+    /// <param name="instance">The <typeparamref name="TService"/> instance.</param>
+    /// <param name="setAsDefault">Optional: set as the default AI service for type <typeparamref name="TService"/></param>
+    public KernelBuilder WithAIService<TService>(
+        string? serviceId,
+        TService instance,
+        bool setAsDefault = false) where TService : IAIService
+    {
+        this._aiServices.SetService<TService>(serviceId, instance, setAsDefault);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a <typeparamref name="TService"/> factory method to the services collection
+    /// </summary>
+    /// <param name="factory">The factory method that creates the AI service instances of type <typeparamref name="TService"/>.</param>
+    public KernelBuilder WithDefaultAIService<TService>(Func<ILogger, TService> factory) where TService : IAIService
+    {
+        this._aiServices.SetService<TService>(() => factory(this._logger));
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a <typeparamref name="TService"/> factory method to the services collection
+    /// </summary>
+    /// <param name="serviceId">The service ID</param>
+    /// <param name="factory">The factory method that creates the AI service instances of type <typeparamref name="TService"/>.</param>
+    /// <param name="setAsDefault">Optional: set as the default AI service for type <typeparamref name="TService"/></param>
+    public KernelBuilder WithAIService<TService>(
+        string? serviceId,
+        Func<(ILogger Logger, KernelConfig Config), TService> factory,
+        bool setAsDefault = false) where TService : IAIService
+    {
+        this._aiServices.SetService<TService>(serviceId, () => factory((this._logger, this._config)), setAsDefault);
         return this;
     }
 }

@@ -6,11 +6,12 @@ using System.Text.Json.Serialization;
 namespace Microsoft.SemanticKernel.Connectors.Memory.Qdrant.Http.ApiSchema;
 
 #pragma warning disable CA1812 // Avoid uninstantiated internal classes: Used for Json Deserialization
-internal class SearchVectorsResponse : QdrantResponse
+internal sealed class SearchVectorsResponse : QdrantResponse
 {
-    internal class ScoredPoint
+    internal sealed class ScoredPoint
     {
         [JsonPropertyName("id")]
+        [JsonConverter(typeof(NumberToStringConverter))]
         public string Id { get; }
 
         [JsonPropertyName("version")]
@@ -23,7 +24,7 @@ internal class SearchVectorsResponse : QdrantResponse
         public Dictionary<string, object> Payload { get; set; }
 
         [JsonPropertyName("vector")]
-        public IEnumerable<float> Vector { get; }
+        public IEnumerable<float>? Vector { get; }
 
         [JsonConstructor]
         public ScoredPoint(string id, double? score, Dictionary<string, object> payload, IEnumerable<float> vector)

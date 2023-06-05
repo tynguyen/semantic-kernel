@@ -2,13 +2,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel.AI.Embeddings;
 using Microsoft.SemanticKernel.Connectors.Memory.Qdrant;
 using Microsoft.SemanticKernel.Memory;
 using Moq;
+using Moq.Protected;
 using Xunit;
 
 namespace SemanticKernel.Connectors.UnitTests.Memory.Qdrant;
@@ -21,7 +25,86 @@ public class QdrantMemoryStoreTests3
     private readonly string _id = "Id";
     private readonly string _text = "text";
     private readonly string _description = "description";
-    private readonly Embedding<float> _embedding = new Embedding<float>(new float[] { 1, 1, 1 });
+    private readonly Embedding<float> _embedding = new(new float[] { 1, 1, 1 });
+
+    [Fact]
+    public async Task GetNearestMatchesAsyncCallsDoNotReturnVectorsUnlessSpecifiedAsync()
+    {
+        // Arrange
+        var mockQdrantClient = new Mock<IQdrantVectorDbClient>();
+        mockQdrantClient
+            .Setup<IAsyncEnumerable<(QdrantVectorRecord, double)>>(x => x.FindNearestInCollectionAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<float>>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<bool>(),
+                null,
+                It.IsAny<CancellationToken>()))
+            .Returns(AsyncEnumerable.Empty<(QdrantVectorRecord, double)>());
+
+        var vectorStore = new QdrantMemoryStore(mockQdrantClient.Object);
+
+        // Act
+        _ = await vectorStore.GetNearestMatchAsync(
+            collectionName: "test_collection",
+            embedding: this._embedding,
+            minRelevanceScore: 0.0);
+        _ = await vectorStore.GetNearestMatchAsync(
+            collectionName: "test_collection",
+            embedding: this._embedding,
+            withEmbedding: true,
+            minRelevanceScore: 0.0);
+        _ = await vectorStore.GetNearestMatchesAsync(
+            collectionName: "test_collection",
+            embedding: this._embedding,
+            limit: 3,
+            minRelevanceScore: 0.0).ToListAsync();
+        _ = await vectorStore.GetNearestMatchesAsync(
+            collectionName: "test_collection",
+            embedding: this._embedding,
+            limit: 3,
+            withEmbeddings: true,
+            minRelevanceScore: 0.0).ToListAsync();
+
+        // Assert
+        mockQdrantClient.Verify<IAsyncEnumerable<(QdrantVectorRecord, double)>>(x => x.FindNearestInCollectionAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<float>>(),
+                It.IsAny<double>(),
+                1,
+                false,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once());
+        mockQdrantClient.Verify<IAsyncEnumerable<(QdrantVectorRecord, double)>>(x => x.FindNearestInCollectionAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<float>>(),
+                It.IsAny<double>(),
+                1,
+                true,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once());
+        mockQdrantClient.Verify<IAsyncEnumerable<(QdrantVectorRecord, double)>>(x => x.FindNearestInCollectionAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<float>>(),
+                It.IsAny<double>(),
+                3,
+                false,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once());
+        mockQdrantClient.Verify<IAsyncEnumerable<(QdrantVectorRecord, double)>>(x => x.FindNearestInCollectionAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<float>>(),
+                It.IsAny<double>(),
+                3,
+                true,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once());
+    }
 
     [Fact]
     public async Task ItReturnsEmptyTupleIfNearestMatchNotFoundAsync()
@@ -34,6 +117,7 @@ public class QdrantMemoryStoreTests3
                 It.IsAny<IEnumerable<float>>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
+                It.IsAny<bool>(),
                 null,
                 It.IsAny<CancellationToken>()))
             .Returns(AsyncEnumerable.Empty<(QdrantVectorRecord, double)>());
@@ -52,6 +136,7 @@ public class QdrantMemoryStoreTests3
                 It.IsAny<IEnumerable<float>>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
+                It.IsAny<bool>(),
                 null,
                 It.IsAny<CancellationToken>()),
             Times.Once());
@@ -72,7 +157,7 @@ public class QdrantMemoryStoreTests3
 
         memoryRecord.Key = Guid.NewGuid().ToString();
 
-        var qdrantVectorRecord = QdrantVectorRecord.FromJson(
+        var qdrantVectorRecord = QdrantVectorRecord.FromJsonMetadata(
             memoryRecord.Key,
             memoryRecord.Embedding.Vector,
             memoryRecord.GetSerializedMetadata());
@@ -84,6 +169,7 @@ public class QdrantMemoryStoreTests3
                 It.IsAny<IEnumerable<float>>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
+                It.IsAny<bool>(),
                 null,
                 It.IsAny<CancellationToken>()))
             .Returns(new[] { (qdrantVectorRecord, 0.5) }.ToAsyncEnumerable());
@@ -102,6 +188,7 @@ public class QdrantMemoryStoreTests3
                 It.IsAny<IEnumerable<float>>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
+                It.IsAny<bool>(),
                 null,
                 It.IsAny<CancellationToken>()),
             Times.Once());
@@ -124,6 +211,7 @@ public class QdrantMemoryStoreTests3
                 It.IsAny<IEnumerable<float>>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
+                It.IsAny<bool>(),
                 null,
                 It.IsAny<CancellationToken>()))
             .Returns(AsyncEnumerable.Empty<(QdrantVectorRecord, double)>());
@@ -139,5 +227,83 @@ public class QdrantMemoryStoreTests3
 
         // Assert
         Assert.Empty(similarityResults);
+    }
+
+    [Fact]
+    public async Task ScoredVectorSupportsIntegerIds()
+    {
+        // Arrange
+        var payloadId = "payloadId";
+        var metadataId = "metadataId";
+        var expectedId = 100;
+
+        var scoredPointJsonWithIntegerId =
+            "{" +
+                "\"result\": " +
+                "   [{" +
+                        "\"id\": " + expectedId + "," +
+                        "\"version\": 0," +
+                        "\"score\": null," +
+                        "\"payload\": {}," +
+                        "\"vector\": null " +
+                    "}]" +
+            "}";
+
+        using (var httpResponseMessage = new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(scoredPointJsonWithIntegerId) })
+        {
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(httpResponseMessage);
+
+            //Act
+            using var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            {
+                var client = new QdrantVectorDbClient("http://localhost", 1536, null, httpClient);
+                var result = await client.GetVectorByPayloadIdAsync(payloadId, metadataId);
+
+                //Assert
+                Assert.Equal<string>(result!.PointId, expectedId.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ScoredVectorSupportsStringIds()
+    {
+        // Arrange
+        var payloadId = "payloadId";
+        var metadataId = "metadataId";
+        var expectedId = Guid.NewGuid().ToString();
+
+        var scoredPointJsonWithIntegerId =
+            "{" +
+                "\"result\": " +
+                "   [{" +
+                        "\"id\": \"" + expectedId + "\"," +
+                        "\"version\": 0," +
+                        "\"score\": null," +
+                        "\"payload\": {}," +
+                        "\"vector\": null " +
+                    "}]" +
+            "}";
+
+        using (var httpResponseMessage = new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(scoredPointJsonWithIntegerId) })
+        {
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(httpResponseMessage);
+
+            //Act
+            using var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            {
+                var client = new QdrantVectorDbClient("http://localhost", 1536, null, httpClient);
+                var result = await client.GetVectorByPayloadIdAsync(payloadId, metadataId);
+
+                //Assert
+                Assert.Equal<string>(result!.PointId, expectedId);
+            }
+        }
     }
 }
